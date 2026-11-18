@@ -1,4 +1,9 @@
 "use client";
+import { ProductEditor } from "./product-editor";
+import { Select } from "./ui/select";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import { Button } from "./ui/button";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import {
@@ -22,7 +27,6 @@ import {
   CrochetProduct,
   Order,
   SiteContent,
-  collections,
   money,
   orderStatuses,
   whatsappLink,
@@ -114,7 +118,7 @@ export function ZimmazAdmin() {
           >
             <label>
               Username
-              <input
+              <Input
                 name="username"
                 autoComplete="username"
                 required
@@ -123,7 +127,7 @@ export function ZimmazAdmin() {
             </label>
             <label>
               Password
-              <input
+              <Input
                 name="password"
                 autoComplete="current-password"
                 type="password"
@@ -136,9 +140,9 @@ export function ZimmazAdmin() {
                 {loginError}
               </p>
             )}
-            <button className="button" type="submit">
+            <Button type="submit">
               Sign in to studio <ArrowUpRight size={17} />
-            </button>
+            </Button>
           </form>
           <div className="demo-login">
             Phase one demo · <b>admin</b> / <b>test1234</b>
@@ -398,7 +402,7 @@ export function ZimmazAdmin() {
             <div className="admin-toolbar">
               <label className="search-field">
                 <Search size={16} />
-                <input
+                <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={
@@ -409,21 +413,21 @@ export function ZimmazAdmin() {
                   aria-label={`Search ${section}`}
                 />
               </label>
-              <select
+              <Select
                 aria-label="Filter records"
                 value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              >
-                <option value="All">
-                  All {section === "Products" ? "availability" : "statuses"}
-                </option>
-                {(section === "Products"
-                  ? ["Available", "Unavailable"]
-                  : orderStatuses
-                ).map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
+                onValueChange={setFilter}
+                options={[
+                  {
+                    value: "All",
+                    label: `All ${section === "Products" ? "availability" : "statuses"}`,
+                  },
+                  ...(section === "Products"
+                    ? ["Available", "Unavailable"]
+                    : orderStatuses
+                  ).map((s) => ({ value: s, label: s })),
+                ]}
+              />
               <span className="result-count">
                 {section === "Products"
                   ? filteredProducts.length
@@ -431,8 +435,9 @@ export function ZimmazAdmin() {
                 results
               </span>
               {section === "Products" && (
-                <button
-                  className="button small"
+                <Button
+                  className="aui-new-product"
+                  size="small"
                   onClick={() =>
                     setEditing({
                       id: crypto.randomUUID(),
@@ -451,7 +456,7 @@ export function ZimmazAdmin() {
                 >
                   <Plus size={16} />
                   New product
-                </button>
+                </Button>
               )}
             </div>
             {section === "Products" ? (
@@ -625,23 +630,21 @@ export function ZimmazAdmin() {
             </dl>
             <label>
               Order status
-              <select
+              <Select
+                aria-label="Order status"
                 value={selectedOrder.status}
-                onChange={(e) => {
+                onValueChange={(value) => {
                   const updated = {
                     ...selectedOrder,
-                    status: e.target.value as Order["status"],
+                    status: value as Order["status"],
                   };
                   if (
                     act(() => store.saveOrder(updated), "Order status updated.")
                   )
                     setSelectedOrder(updated);
                 }}
-              >
-                {orderStatuses.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
+                options={orderStatuses.map((s) => ({ value: s, label: s }))}
+              />
             </label>
             <a
               className="button"
@@ -784,288 +787,6 @@ function OrderTable({
     </div>
   );
 }
-function ProductEditor({
-  product,
-  products,
-  close,
-  save,
-}: {
-  product: CrochetProduct;
-  products: CrochetProduct[];
-  close: () => void;
-  save: (product: CrochetProduct) => void;
-}) {
-  const [draft, setDraft] = useState(product);
-  const [colors, setColors] = useState(product.colors.join(", "));
-  const [error, setError] = useState("");
-  function field<K extends keyof CrochetProduct>(
-    key: K,
-    value: CrochetProduct[K],
-  ) {
-    setDraft((p) => ({ ...p, [key]: value }));
-  }
-  return (
-    <Modal
-      title={
-        product.name ? "Edit your little lovely" : "Add a new little lovely"
-      }
-      close={close}
-    >
-      <form
-        className="form-stack"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!draft.name.trim() || !draft.description.trim()) {
-            setError("Add a product name and description.");
-            return;
-          }
-          const cleanColors = [
-            ...new Set(
-              colors
-                .split(",")
-                .map((c) => c.trim())
-                .filter(Boolean),
-            ),
-          ];
-          const slug =
-            draft.slug.trim() ||
-            draft.name
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-")
-              .replace(/^-|-$/g, "");
-          if (!cleanColors.length || !draft.variations.length) {
-            setError("Add at least one color and one price variation.");
-            return;
-          }
-          if (products.some((p) => p.id !== draft.id && p.slug === slug)) {
-            setError(
-              "Another product uses this URL name. Please choose a different one.",
-            );
-            return;
-          }
-          if (
-            draft.variations.some(
-              (v) =>
-                !v.name.trim() || !Number.isFinite(v.price) || v.price <= 0,
-            )
-          ) {
-            setError("Each variation needs a name and a price above zero.");
-            return;
-          }
-          save({
-            ...draft,
-            name: draft.name.trim(),
-            description: draft.description.trim(),
-            colors: cleanColors,
-            slug,
-          });
-        }}
-      >
-        <div className="editor-photo">
-          <ProductImage product={draft} />
-          <div>
-            <label>
-              Product photo
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.size > 1500000) {
-                    setError(
-                      "Choose an image under 1.5 MB for this browser preview.",
-                    );
-                    return;
-                  }
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    field("image", String(reader.result));
-                    setError("");
-                  };
-                  reader.readAsDataURL(file);
-                }}
-              />
-            </label>
-            <label>
-              Sample photo
-              <select
-                value={draft.tile}
-                onChange={(e) =>
-                  setDraft((p) => ({
-                    ...p,
-                    tile: Number(e.target.value),
-                    image: "/images/crochet-collection.png",
-                  }))
-                }
-              >
-                {[
-                  "Daisy tote",
-                  "Bunny",
-                  "Flowers",
-                  "Bucket hat",
-                  "Heart",
-                  "Coasters",
-                ].map((name, i) => (
-                  <option key={i} value={i}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </div>
-        <label>
-          Product name
-          <input
-            required
-            maxLength={100}
-            value={draft.name}
-            onChange={(e) => field("name", e.target.value)}
-          />
-        </label>
-        <div className="form-row">
-          <label>
-            Category
-            <select
-              value={draft.category}
-              onChange={(e) => field("category", e.target.value)}
-            >
-              {collections.slice(1).map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            URL name
-            <input
-              pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              maxLength={100}
-              placeholder="auto-created-from-name"
-              value={draft.slug}
-              onChange={(e) => field("slug", e.target.value)}
-            />
-          </label>
-        </div>
-        <label>
-          Description
-          <textarea
-            required
-            maxLength={2000}
-            rows={3}
-            value={draft.description}
-            onChange={(e) => field("description", e.target.value)}
-          />
-        </label>
-        <label>
-          Available colors <span className="muted">(comma separated)</span>
-          <input
-            required
-            value={colors}
-            onChange={(e) => setColors(e.target.value)}
-            placeholder="Cream, Sage, Rose"
-          />
-        </label>
-        <fieldset>
-          <legend>Price variations · LKR</legend>
-          <div className="variation-editor">
-            {draft.variations.map((v, i) => (
-              <div key={i}>
-                <input
-                  required
-                  aria-label={`Variation ${i + 1} name`}
-                  placeholder="e.g. Small"
-                  value={v.name}
-                  onChange={(e) =>
-                    field(
-                      "variations",
-                      draft.variations.map((item, j) =>
-                        j === i ? { ...item, name: e.target.value } : item,
-                      ),
-                    )
-                  }
-                />
-                <input
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  required
-                  aria-label={`Variation ${i + 1} price`}
-                  value={v.price}
-                  onChange={(e) =>
-                    field(
-                      "variations",
-                      draft.variations.map((item, j) =>
-                        j === i
-                          ? { ...item, price: Number(e.target.value) }
-                          : item,
-                      ),
-                    )
-                  }
-                />
-                <button
-                  type="button"
-                  disabled={draft.variations.length === 1}
-                  aria-label={`Remove variation ${i + 1}`}
-                  className="icon-button"
-                  onClick={() =>
-                    field(
-                      "variations",
-                      draft.variations.filter((_, j) => j !== i),
-                    )
-                  }
-                >
-                  <X size={17} />
-                </button>
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="text-link"
-            onClick={() =>
-              field("variations", [...draft.variations, { name: "", price: 0 }])
-            }
-          >
-            <Plus size={15} />
-            Add variation
-          </button>
-        </fieldset>
-        <div className="checkbox-row">
-          <label>
-            <input
-              type="checkbox"
-              checked={draft.available}
-              onChange={(e) => field("available", e.target.checked)}
-            />
-            Available to order
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={draft.featured}
-              onChange={(e) => field("featured", e.target.checked)}
-            />
-            Feature on homepage
-          </label>
-        </div>
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
-        <div className="dialog-actions">
-          <button className="button secondary" type="button" onClick={close}>
-            Cancel
-          </button>
-          <button className="button" type="submit">
-            Save product <ArrowUpRight size={17} />
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 function ContentEditor({
   content,
   save,
@@ -1100,7 +821,7 @@ function ContentEditor({
           <p>A little about the hands behind the stitches.</p>
           <label>
             Story heading
-            <input
+            <Input
               required
               maxLength={120}
               value={draft.storyTitle}
@@ -1111,7 +832,7 @@ function ContentEditor({
           </label>
           <label>
             Story text
-            <textarea
+            <Textarea
               required
               maxLength={1500}
               rows={4}
@@ -1126,7 +847,7 @@ function ContentEditor({
           <h3>Ordering & contact</h3>
           <label>
             Receiving WhatsApp number
-            <input
+            <Input
               required
               type="tel"
               value={draft.whatsapp}
@@ -1136,7 +857,7 @@ function ContentEditor({
           </label>
           <label>
             Production timing note
-            <input
+            <Input
               required
               maxLength={160}
               value={draft.leadTime}
@@ -1149,9 +870,9 @@ function ContentEditor({
             {error}
           </p>
         )}
-        <button type="submit" className="button">
+        <Button type="submit">
           Save website content <ArrowUpRight size={17} />
-        </button>
+        </Button>
       </form>
     </div>
   );

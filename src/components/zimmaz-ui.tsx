@@ -1,6 +1,4 @@
 "use client";
-import { useEffect, useRef } from "react";
-import { X } from "lucide-react";
 import { CrochetProduct } from "@/lib/zimmaz";
 export function ProductImage({
   product,
@@ -31,42 +29,4 @@ export function ProductImage({
     />
   );
 }
-export function Modal({
-  title,
-  children,
-  close,
-}: {
-  title: string;
-  children: React.ReactNode;
-  close: () => void;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current;
-    dialog?.showModal();
-    return () => dialog?.close();
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      className="modal"
-      aria-label={title}
-      onCancel={close}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
-    >
-      <div className="modal-head">
-        <h2>{title}</h2>
-        <button
-          className="icon-button"
-          aria-label="Close dialog"
-          onClick={close}
-        >
-          <X size={20} />
-        </button>
-      </div>
-      {children}
-    </dialog>
-  );
-}
+export { Modal } from "./ui/modal";

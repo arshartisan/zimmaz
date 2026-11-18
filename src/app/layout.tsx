@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./alignui.css";
 import { ZimmazProvider } from "@/lib/zimmaz-context";
 import { ZimmazShell } from "@/components/zimmaz-shell";
 
